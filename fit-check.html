@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Antures - 상품 상세</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: { antures: { yellow: '#F7E636', black: '#1A1A1A', gray: '#999999' } },
+          maxWidth: { pc: '480px' },
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Pretendard', -apple-system, sans-serif; }
+    .bottom-sheet { transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1); }
+    .bottom-sheet.closed { transform: translateY(100%); }
+    .overlay { transition: opacity 0.3s ease; }
+    .overlay.hidden-overlay { opacity: 0; pointer-events: none; }
+    .fade-up { animation: fadeUp 0.3s ease-out; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    .gauge-marker { transition: left 0.6s ease-out; }
+    /* 데모 상품 전환 탭 */
+    .demo-tab { scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
+    .demo-tab > * { scroll-snap-align: start; }
+  </style>
+</head>
+<body class="bg-white max-w-pc mx-auto relative">
+
+  <!-- ===== 데모용 상품 전환 (실제 서비스에는 없는 영역) ===== -->
+  <div class="bg-gray-900 text-white text-center py-2 px-4 text-xs">
+    <span class="opacity-60">데모</span>
+    <span class="mx-2">|</span>
+    <button onclick="switchProduct(0)" id="demo-tab-0" class="demo-btn font-bold underline">후디</button>
+    <button onclick="switchProduct(1)" id="demo-tab-1" class="demo-btn opacity-60 ml-2">스웨터</button>
+    <button onclick="switchProduct(2)" id="demo-tab-2" class="demo-btn opacity-60 ml-2">가디건</button>
+  </div>
+
+  <!-- ===== 헤더 (Antures 스타일) ===== -->
+  <header class="sticky top-0 z-40 bg-white">
+    <div class="flex items-center justify-between px-4 py-3">
+      <button class="p-1">
+        <svg class="w-6 h-6 text-gray-900" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>
+      </button>
+      <div class="flex items-center gap-5">
+        <button class="p-1">
+          <svg class="w-[22px] h-[22px] text-gray-900" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z"/></svg>
+        </button>
+        <button class="p-1">
+          <svg class="w-[22px] h-[22px] text-gray-900" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== 상품 이미지 ===== -->
+  <div class="relative">
+    <div id="product-image" class="bg-gray-100 flex items-center justify-center">
+      <img id="product-img" src="" alt="" class="w-full" />
+      <span id="product-emoji" class="text-8xl absolute hidden"></span>
+    </div>
+    <!-- 이미지 인디케이터 -->
+    <div class="flex justify-center gap-1.5 py-3">
+      <div class="w-6 h-0.5 bg-gray-900 rounded-full"></div>
+      <div class="w-6 h-0.5 bg-gray-200 rounded-full"></div>
+      <div class="w-6 h-0.5 bg-gray-200 rounded-full"></div>
+    </div>
+  </div>
+
+  <!-- ===== 상품 정보 ===== -->
+  <div class="px-5 pb-3">
+    <!-- 브랜드 -->
+    <div class="flex items-center justify-between mb-1">
+      <button class="text-sm text-gray-500 flex items-center gap-1" id="product-brand">
+        <span id="brand-name"></span> <span class="text-xs">›</span>
+      </button>
+      <button class="p-0.5">
+        <svg class="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+      </button>
+    </div>
+    <!-- 상품명 -->
+    <h1 class="text-base font-normal text-gray-900 mb-2" id="product-name"></h1>
+    <!-- 가격 -->
+    <div class="flex items-baseline gap-2">
+      <span class="text-lg font-bold text-red-500" id="product-discount"></span>
+      <span class="text-lg font-bold" id="product-price"></span>
+    </div>
+    <div class="flex items-center gap-2 mt-0.5">
+      <span class="text-sm text-gray-400 line-through" id="product-original-price"></span>
+      <span class="text-gray-300 text-sm">ⓘ</span>
+    </div>
+  </div>
+
+  <!-- 리뷰 포인트 적립 배너 -->
+  <div class="mx-5 mb-3 rounded-lg bg-gray-50 px-4 py-2.5 text-center text-sm">
+    리뷰 작성 시 최대 <span class="font-bold text-red-500">2,400 P</span> 적립
+  </div>
+
+  <!-- 사이즈 / 배송 / 반품 정보 -->
+  <div class="mx-5 mb-3 text-sm">
+    <!-- 사이즈 -->
+    <div class="flex items-start py-3 border-t border-gray-100">
+      <span class="text-gray-400 w-12 shrink-0">사이즈</span>
+      <div class="flex-1">
+        <div class="flex items-center justify-between">
+          <div>
+            <span id="product-gender-size" class="font-medium">남성, XL</span>
+            <span class="text-gray-300 ml-1 text-xs cursor-help">ⓘ</span>
+          </div>
+        </div>
+        <div class="flex items-center justify-between mt-1.5">
+          <span class="text-gray-500" id="product-brand-size">브랜드 사이즈 : XL</span>
+          <button onclick="scrollToSizeInfo()" class="text-xs text-gray-500 border border-gray-200 rounded px-2 py-1">사이즈 상세 ›</button>
+        </div>
+        <!-- ★ 제안: 사이즈 영역 내 핏체크 미니 CTA ★ -->
+        <button id="mini-fit-cta" onclick="openFitCheck()"
+          class="mt-2.5 w-full rounded-lg border border-gray-900/10 bg-gray-50 px-3.5 py-2.5 flex items-center justify-between active:bg-gray-100 transition-all">
+          <div class="flex items-center gap-2">
+            <span class="w-5 h-5 rounded-full bg-gray-900 flex items-center justify-center">
+              <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+            </span>
+            <span class="text-[13px] font-medium text-gray-900">이 사이즈, 나한테 맞을까?</span>
+          </div>
+          <span class="text-[11px] text-gray-400">핏 확인</span>
+        </button>
+      </div>
+    </div>
+    <!-- 배송 -->
+    <div class="flex items-center py-3 border-t border-gray-100">
+      <span class="text-gray-400 w-12 shrink-0">배송</span>
+      <span><span class="bg-red-500 text-white px-1.5 py-0.5 rounded text-[10px] font-bold mr-1.5">무료 배송</span>당일 발송(낮 12시 이전 결제 시)</span>
+    </div>
+    <!-- 반품 -->
+    <div class="flex items-center py-3 border-t border-gray-100">
+      <span class="text-gray-400 w-12 shrink-0">반품</span>
+      <span>최초 1회 <span class="bg-red-500 text-white px-1.5 py-0.5 rounded text-[10px] font-bold">무료 반품</span></span>
+    </div>
+  </div>
+
+  <!-- ===== 탭 메뉴 ===== -->
+  <div id="tab-menu" class="border-b border-gray-200 flex sticky top-[52px] z-30 bg-white">
+    <button class="flex-1 py-3 text-sm font-bold text-gray-900 border-b-2 border-gray-900">상품정보</button>
+    <button class="flex-1 py-3 text-sm text-gray-400">문의</button>
+  </div>
+
+  <!-- ===== 상품정보 탭 콘텐츠 ===== -->
+  <div class="px-5 py-6">
+
+    <!-- Antures 소개 (어두운 배경) -->
+    <div class="bg-gray-900 text-white rounded-lg p-6 text-center mb-6">
+      <div class="flex justify-center gap-6 text-xs text-gray-400 mb-4">
+        <span>Premium</span><span>Resale</span><span>Platform</span>
+      </div>
+      <p class="text-2xl font-bold tracking-wide mb-3">Antures</p>
+      <p class="text-sm font-bold mb-2">본 상품은 중고 상품입니다.</p>
+      <p class="text-xs text-gray-400 leading-relaxed">앤처스는 백화점과 공식 제휴를 통해<br>매입한 고품질 의류만을 취급합니다.</p>
+    </div>
+
+    <!-- Why Antures -->
+    <div class="bg-antures-yellow rounded-lg p-6 mb-6 text-sm">
+      <p class="font-bold text-base mb-4">Why Antures.</p>
+      <div class="space-y-4">
+        <div class="flex gap-3">
+          <span class="font-bold text-gray-500 shrink-0">01</span>
+          <div><p class="font-bold">전문 세탁 업체의 클리닝</p><p class="text-gray-600 text-xs mt-0.5">구매 후 별도 세탁 없이 바로 착용하셔도 좋습니다.</p></div>
+        </div>
+        <div class="flex gap-3">
+          <span class="font-bold text-gray-500 shrink-0">02</span>
+          <div><p class="font-bold">깨끗한 A+컨디션</p><p class="text-gray-600 text-xs mt-0.5">전문가의 세탁·복원·케어 과정을 거친 A+ 컨디션 상품만을 판매합니다.</p></div>
+        </div>
+        <div class="flex gap-3">
+          <span class="font-bold text-gray-500 shrink-0">03</span>
+          <div><p class="font-bold">부담 없이 반품 가능</p><p class="text-gray-600 text-xs mt-0.5">상품 착용 후 사이즈가 맞지 않다면 상품 도착일 기준 7일 이내 반품이 가능합니다.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 정품 안내 -->
+    <div class="rounded-xl border border-gray-200 p-6 mb-6 text-center text-sm text-gray-500 leading-relaxed">
+      <p class="text-base font-bold text-gray-900 mb-3">정품 안내</p>
+      <p>앤처스는 국내 정식 유통 채널을 통해 판매된<br>정품만을 취급합니다. 병행수입 상품이나 가품은<br>일체 취급하지 않습니다.</p>
+      <p class="mt-2">구매하신 상품이 정품이 아닐 경우,<br>구매 금액의 300%를 보상해 드립니다.</p>
+      <p class="text-xl font-bold text-gray-900 mt-3 tracking-wide">Antures</p>
+    </div>
+
+    <!-- 이미지 확대 배너 -->
+    <div class="rounded-lg bg-gray-50 px-4 py-3 mb-6 text-center text-sm text-gray-500 flex items-center justify-center gap-2">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7"/></svg>
+      이미지를 확대하여 확인해 보세요!
+    </div>
+
+    <!-- 상세 상품 이미지 (상품정보 탭 내) -->
+    <div id="detail-image" class="mb-6 overflow-hidden rounded-lg">
+      <img id="detail-img" src="" alt="" class="w-full" />
+    </div>
+
+    <!-- 상세 정보 더보기 버튼 -->
+    <div class="mb-6">
+      <button class="w-full rounded-lg border border-gray-200 py-3 text-sm text-gray-600 font-medium">
+        상세 정보 더보기 ∨
+      </button>
+    </div>
+
+    <!-- 사이즈 정보 제목 -->
+    <h3 class="text-base font-bold mb-4">사이즈 정보</h3>
+
+    <!-- 사이즈 도식화 + 테이블 -->
+    <div id="size-info-anchor" class="mb-6">
+      <div class="bg-gray-50 rounded-lg p-6 mb-4 flex justify-center">
+        <svg id="size-diagram" viewBox="0 0 200 200" class="w-48 h-48"></svg>
+      </div>
+
+      <!-- 사이즈 테이블 -->
+      <table class="w-full text-sm" id="size-table">
+        <tbody></tbody>
+      </table>
+      <p class="text-xs text-gray-400 mt-3">디자인, 소재, 측정 방법에 따라 오차가 있을 수 있습니다. (단위 : cm)</p>
+    </div>
+
+    <!-- ★ 핏 진단 CTA ★ -->
+    <button onclick="openFitCheck()"
+      class="w-full rounded-2xl bg-gray-900 py-4 text-[15px] font-semibold text-white active:bg-gray-800 transition-colors mb-6 flex items-center justify-center gap-2.5 shadow-sm">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16m-7 6h7"/><circle cx="7.5" cy="18" r="1.5" fill="currentColor" stroke="none"/></svg>
+      이 사이즈, 나한테 맞는지 확인하기
+    </button>
+
+    <!-- 사이즈 핏 가이드 (LLM mock) -->
+    <div id="fit-guide-section" class="rounded-2xl bg-gray-50 p-5 mb-6">
+      <h3 class="text-[13px] font-bold mb-3 text-gray-900">사이즈 핏 가이드</h3>
+      <p id="fit-guide-summary" class="text-[14px] text-gray-700 leading-relaxed mb-3"></p>
+      <p id="fit-guide-context" class="text-[12px] text-gray-400 mb-4"></p>
+      <button onclick="openFitCheck()" class="text-[13px] text-gray-500 underline underline-offset-2 active:text-gray-900 transition-colors">내 사이즈는?</button>
+      <p class="text-[11px] text-gray-300 mt-3">사이즈가 안 맞으면? 무료 반품권 1회 제공</p>
+    </div>
+
+    <!-- 앤처스 가입 배너 -->
+    <div class="rounded-lg bg-antures-yellow px-4 py-3 mb-6 flex items-center justify-between">
+      <div>
+        <p class="text-sm font-bold">앤처스가 처음이신가요?</p>
+        <p class="text-xs text-gray-600">지금 가입시 5,000P 를 드려요!</p>
+      </div>
+      <div class="bg-gray-900 text-white rounded-lg px-3 py-1.5 text-xs font-bold text-center leading-tight">
+        Antures<br><span class="text-antures-yellow">5,000 P</span>
+      </div>
+    </div>
+
+    <!-- FAQ -->
+    <div class="border-t border-gray-200 pt-6">
+      <h2 class="text-2xl font-bold mb-4">FAQ</h2>
+      <div class="space-y-4 text-sm">
+        <div>
+          <p class="font-bold mb-1">Q. 판매하는 상품은 정품인가요?</p>
+          <p class="text-gray-500 leading-relaxed">네, 앤처스에서 판매되는 모든 상품은 분야별 전문 감정사의 엄격한 검수 과정을 통과한 100% 정품입니다.</p>
+        </div>
+        <div>
+          <p class="font-bold mb-1">Q. 사이즈가 안 맞으면 어떻게 하나요?</p>
+          <p class="text-gray-500 leading-relaxed">상품 착용 후 사이즈가 맞지 않는다면 상품 도착일 기준 7일 이내 반품이 가능합니다. 최초 1회 무료 반품을 제공합니다.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 하단 여백 (고정 바 높이만큼) -->
+  <div class="h-24"></div>
+
+  <!-- ===== 하단 고정 바 (Antures 스타일) ===== -->
+  <div class="fixed bottom-0 left-0 right-0 z-50 mx-auto max-w-pc bg-white border-t border-gray-100 px-5 py-2.5 flex items-center gap-4 pb-[env(safe-area-inset-bottom)]">
+    <button class="p-1">
+      <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+    </button>
+    <button class="p-1">
+      <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+    </button>
+    <button class="flex-1 rounded-lg bg-antures-yellow py-3.5 text-sm font-bold text-gray-900 active:brightness-95 transition">
+      주문하기
+    </button>
+  </div>
+
+  <!-- ===== 오버레이 ===== -->
+  <div id="overlay" class="overlay hidden-overlay fixed inset-0 z-[60] bg-black/50" onclick="closeFitCheck()"></div>
+
+  <!-- ===== 바텀시트: 핏 진단 ===== -->
+  <div id="bottom-sheet" class="bottom-sheet closed fixed bottom-0 left-0 right-0 z-[70] mx-auto max-w-pc bg-white rounded-t-3xl max-h-[90vh] overflow-y-auto pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
+
+    <!-- 핸들 바 -->
+    <div class="sticky top-0 bg-white rounded-t-3xl pt-3 pb-2 z-10">
+      <div class="w-9 h-[5px] bg-gray-200 rounded-full mx-auto"></div>
+      <div class="flex items-center justify-between px-5 mt-3">
+        <h2 class="text-lg font-bold" id="sheet-title">핏 진단</h2>
+        <button onclick="closeFitCheck()" class="p-1 rounded-full hover:bg-gray-100 transition">
+          <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="px-5 pb-8">
+
+      <!-- ===== 시트 내용: 입력 폼 ===== -->
+      <div id="sheet-input" class="fade-up">
+        <!-- 핏 가이드 티저 -->
+        <div id="sheet-teaser" class="rounded-xl bg-gray-50 px-4 py-3 mt-1 mb-4">
+          <p id="sheet-teaser-text" class="text-[12px] text-gray-500 leading-relaxed"></p>
+          <p class="text-[11px] text-gray-300 mt-1">내 핏도 확인해 보세요</p>
+        </div>
+
+        <form onsubmit="runFitCheck(event)" class="space-y-5">
+          <!-- 성별 -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">성별</label>
+            <div class="grid grid-cols-2 gap-3">
+              <button type="button" onclick="selectGender('female', this)"
+                class="gender-btn rounded-lg border border-gray-300 py-2.5 text-sm font-medium bg-white text-gray-700 transition-colors">여성</button>
+              <button type="button" onclick="selectGender('male', this)"
+                class="gender-btn rounded-lg border border-gray-300 py-2.5 text-sm font-medium bg-white text-gray-700 transition-colors">남성</button>
+            </div>
+          </div>
+
+          <!-- 키 + 몸무게 -->
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label for="inp-height" class="block text-sm font-medium text-gray-700 mb-1">키</label>
+              <div class="relative">
+                <input id="inp-height" type="text" inputmode="decimal" placeholder="예: 170"
+                  class="w-full rounded-lg border border-gray-300 px-3 py-2.5 pr-10 text-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900" />
+                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">cm</span>
+              </div>
+            </div>
+            <div>
+              <label for="inp-weight" class="block text-sm font-medium text-gray-700 mb-1">몸무게</label>
+              <div class="relative">
+                <input id="inp-weight" type="text" inputmode="decimal" placeholder="예: 65"
+                  class="w-full rounded-lg border border-gray-300 px-3 py-2.5 pr-10 text-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900" />
+                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">kg</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 직접 입력 토글 -->
+          <div>
+            <button type="button" onclick="toggleDirect()" class="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600">
+              <span id="direct-arrow">▶</span> 치수를 직접 알고 있다면
+            </button>
+            <div id="direct-fields" class="hidden mt-3 space-y-3"></div>
+          </div>
+
+          <p id="input-error" class="text-sm text-red-500 hidden"></p>
+
+          <button type="submit"
+            class="w-full rounded-2xl bg-gray-900 py-3.5 text-[15px] font-semibold text-white active:bg-gray-800 transition-colors">
+            핏 확인하기
+          </button>
+        </form>
+      </div>
+
+      <!-- ===== 시트 내용: 결과 ===== -->
+      <div id="sheet-result" class="hidden fade-up">
+        <div id="overall-result" class="rounded-xl border p-5 mb-4 mt-2"></div>
+        <div id="no-details-warning" class="hidden rounded-xl border border-yellow-200 bg-yellow-50 p-4 mb-4">
+          <p class="text-sm text-yellow-700">이 상품의 실측 데이터가 충분하지 않아 정확한 핏 판정이 어렵습니다.</p>
+        </div>
+        <div id="detail-results" class="rounded-xl border border-gray-200 bg-white p-5 mb-4 space-y-5"></div>
+        <div id="estimated-info" class="rounded-xl bg-gray-50 p-4 mb-4"></div>
+        <!-- Reassurance Block -->
+        <div class="rounded-xl bg-gray-50 px-4 py-3.5 mb-4 text-center">
+          <p class="text-[13px] font-medium text-gray-600">중고인데 반품이 돼요?</p>
+          <p class="text-[12px] text-gray-400 mt-0.5">네, 앤처스는 최초 1회 무료로 반품이 가능해요.</p>
+        </div>
+        <button onclick="showInputAgain()"
+          class="w-full rounded-2xl border border-gray-200 py-3 text-sm font-medium text-gray-600 active:bg-gray-50 transition-colors">
+          다시 확인하기
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // =====================================================
+    // 샘플 상품 데이터
+    // =====================================================
+    const PRODUCTS = [
+      {
+        id: 0, name: 'Maison Kitsune Sweatshirt/Hoodie', brand: '매종키츠네', emoji: '🧥',
+        category: 'top_knit', main_category: 'top',
+        discount: '58%', price: '120,000원', originalPrice: '286,000원',
+        shoulder_width: 54.1, chest_width: 52.8, sleeve_length: 63.8, total_length: 74,
+        waist_width: null, hip_width: null, thigh_width: null, rise_length: null,
+        productUrl: 'https://antures.net/product/43012',
+        image: 'img-kitsune.jpg',
+        genderSize: '남성, XL', brandSize: 'XL',
+        fitSummary: '보통 체형의 남성 기준, 전체적으로 편안한 핏이에요. 어깨와 가슴 모두 여유가 있어서 부담 없이 입을 수 있어요.',
+        fitContext: '170~178cm · 65~75kg 남성 기준',
+      },
+      {
+        id: 1, name: 'Polo Ralph Lauren Sweater', brand: '폴로랄프로렌', emoji: '🧶',
+        category: 'top_knit', main_category: 'top',
+        discount: '75%', price: '74,000원', originalPrice: '301,000원',
+        shoulder_width: 39.7, chest_width: 47.9, sleeve_length: 58.4, total_length: 59.5,
+        waist_width: null, hip_width: null, thigh_width: null, rise_length: null,
+        productUrl: 'https://antures.net/product/43095',
+        image: 'img-polo.jpg',
+        genderSize: '여성, S', brandSize: 'S',
+        fitSummary: '슬림한 여성 체형에 맞는 사이즈예요. 몸에 자연스럽게 떨어지는 핏이에요.',
+        fitContext: '155~163cm · 45~52kg 여성 기준',
+      },
+      {
+        id: 2, name: 'Lacoste Cardigan', brand: '라코스테', emoji: '🧤',
+        category: 'top_knit', main_category: 'top',
+        discount: '73%', price: '74,000원', originalPrice: '278,000원',
+        shoulder_width: null, chest_width: 57.7, sleeve_length: null, total_length: 74.1,
+        waist_width: null, hip_width: null, thigh_width: null, rise_length: null,
+        productUrl: 'https://antures.net/product/32990',
+        image: 'img-lacoste.jpg',
+        genderSize: '남성, L', brandSize: 'L',
+        fitSummary: '보통~약간 넉넉한 남성 체형 기준, 편안하게 걸치기 좋은 사이즈예요.',
+        fitContext: '168~176cm · 65~78kg 남성 기준',
+      },
+    ];
+
+    // =====================================================
+    // 상수
+    // =====================================================
+    const CATEGORY_LABELS = {
+      outer_jacket:'자켓',outer_coat:'코트',outer_jumper:'점퍼',outer_padding:'패딩',
+      top_tshirt:'티셔츠',top_shirt:'셔츠',top_knit:'니트',dress:'원피스',
+      bottom_pants:'바지',bottom_skirt:'스커트',
+    };
+    const BODY_PART_LABELS = { chest:'가슴', shoulder:'어깨', waist:'허리', hip:'힙', thigh:'허벅지' };
+    const MEASUREMENT_LABELS = {
+      shoulder_width:'어깨단면', chest_width:'가슴단면', sleeve_length:'팔총장',
+      total_length:'총장', waist_width:'허리단면', hip_width:'힙단면',
+      thigh_width:'허벅지단면', rise_length:'밑위',
+    };
+    const PRODUCT_FIELDS = {
+      outer:['shoulder_width','chest_width','sleeve_length','total_length'],
+      top:['shoulder_width','chest_width','sleeve_length','total_length'],
+      dress:['shoulder_width','chest_width','waist_width','hip_width','total_length'],
+      bottom:['waist_width','hip_width','thigh_width','rise_length','total_length'],
+    };
+    const EASE_STANDARDS = {
+      outer:{chest:{tight_max:6,fit_min:6,fit_max:18,loose_min:18},shoulder:{tight_max:1,fit_min:1,fit_max:5,loose_min:5}},
+      top:{chest:{tight_max:4,fit_min:4,fit_max:14,loose_min:14},shoulder:{tight_max:0,fit_min:0,fit_max:4,loose_min:4}},
+      dress:{chest:{tight_max:4,fit_min:4,fit_max:12,loose_min:12},shoulder:{tight_max:0,fit_min:0,fit_max:3,loose_min:3},waist:{tight_max:2,fit_min:2,fit_max:10,loose_min:10},hip:{tight_max:2,fit_min:2,fit_max:10,loose_min:10}},
+      bottom:{waist:{tight_max:2,fit_min:2,fit_max:6,loose_min:6},hip:{tight_max:2,fit_min:2,fit_max:8,loose_min:8},thigh:{tight_max:2,fit_min:2,fit_max:8,loose_min:8}},
+    };
+    const FIT_MAPPINGS = {
+      outer:[{part:'chest',productField:'chest_width',customerField:'chest',needsDoubling:true},{part:'shoulder',productField:'shoulder_width',customerField:'shoulder_width',needsDoubling:false}],
+      top:[{part:'chest',productField:'chest_width',customerField:'chest',needsDoubling:true},{part:'shoulder',productField:'shoulder_width',customerField:'shoulder_width',needsDoubling:false}],
+      dress:[{part:'chest',productField:'chest_width',customerField:'chest',needsDoubling:true},{part:'shoulder',productField:'shoulder_width',customerField:'shoulder_width',needsDoubling:false},{part:'waist',productField:'waist_width',customerField:'waist',needsDoubling:true},{part:'hip',productField:'hip_width',customerField:'hip',needsDoubling:true}],
+      bottom:[{part:'waist',productField:'waist_width',customerField:'waist',needsDoubling:true},{part:'hip',productField:'hip_width',customerField:'hip',needsDoubling:true},{part:'thigh',productField:'thigh_width',customerField:'thigh',needsDoubling:true}],
+    };
+    const DIRECT_INPUT_FIELDS = {
+      outer:[{key:'chest',label:'가슴둘레',tip:'가슴의 가장 넓은 부분을 줄자로 한 바퀴 재세요'},{key:'shoulder_width',label:'어깨너비',tip:'어깨 끝에서 끝까지의 직선 거리'}],
+      top:[{key:'chest',label:'가슴둘레',tip:'가슴의 가장 넓은 부분을 줄자로 한 바퀴 재세요'},{key:'shoulder_width',label:'어깨너비',tip:'어깨 끝에서 끝까지의 직선 거리'}],
+      dress:[{key:'chest',label:'가슴둘레',tip:'가슴의 가장 넓은 부분'},{key:'shoulder_width',label:'어깨너비',tip:'어깨 끝에서 끝까지'},{key:'waist',label:'허리둘레',tip:'배꼽 위 가장 잘록한 부분'},{key:'hip',label:'힙둘레',tip:'엉덩이의 가장 넓은 부분'}],
+      bottom:[{key:'waist',label:'허리둘레',tip:'배꼽 위 가장 잘록한 부분'},{key:'hip',label:'힙둘레',tip:'엉덩이의 가장 넓은 부분'},{key:'thigh',label:'허벅지둘레',tip:'허벅지의 가장 굵은 부분'}],
+    };
+    const REGRESSION = {
+      female:{chest:{h:0.08,w:0.58,c:38.5},waist:{h:0.05,w:0.70,c:22.0},hip:{h:0.10,w:0.43,c:51.5},shoulder_width:{h:0.15,w:0.07,c:10.0},thigh:{h:0.02,w:0.40,c:29.0}},
+      male:{chest:{h:0.13,w:0.53,c:36.0},waist:{h:0.05,w:0.75,c:18.0},hip:{h:0.08,w:0.40,c:52.0},shoulder_width:{h:0.14,w:0.08,c:14.0},thigh:{h:0.01,w:0.35,c:28.0}},
+    };
+
+    // =====================================================
+    // 계산 로직
+    // =====================================================
+    function estimateBody(gender, h, w) {
+      const c = REGRESSION[gender];
+      const est = k => Math.round((c[k].h*h + c[k].w*w + c[k].c)*10)/10;
+      return { chest:est('chest'), shoulder_width:est('shoulder_width'), waist:est('waist'), hip:est('hip'), thigh:est('thigh') };
+    }
+
+    function calculateFit(product, input) {
+      const est = estimateBody(input.gender, input.height, input.weight);
+      if (input.direct) for (const [k,v] of Object.entries(input.direct)) if (v && est[k]!==undefined) est[k]=v;
+      const mappings = FIT_MAPPINGS[product.main_category], standards = EASE_STANDARDS[product.main_category];
+      const lookup = { chest:est.chest, shoulder_width:est.shoulder_width, waist:est.waist, hip:est.hip, thigh:est.thigh };
+      const details = [];
+      for (const m of mappings) {
+        const pv = product[m.productField], cv = lookup[m.customerField];
+        if (pv==null||cv==null) continue;
+        const pc = m.needsDoubling ? pv*2 : pv, ease = pc - cv, range = standards[m.part];
+        if (!range) continue;
+        let verdict = ease < range.tight_max ? 'tight' : ease > range.loose_min ? 'loose' : 'fit';
+        details.push({ part:m.part, partLabel:BODY_PART_LABELS[m.part], ease:Math.round(ease*10)/10, verdict, productValue:pv, customerValue:Math.round(cv*10)/10 });
+      }
+      let ov = 'fit';
+      if (details.some(d=>d.verdict==='tight')) ov='tight';
+      else if (details.some(d=>d.verdict==='loose')) ov='loose';
+      return { overallVerdict:ov, details, estimated:est };
+    }
+
+    function calculateFitRange(product) {
+      const mappings = FIT_MAPPINGS[product.main_category], standards = EASE_STANDARDS[product.main_category], result = {};
+      for (const m of mappings) {
+        const pv = product[m.productField]; if (pv==null) continue;
+        const range = standards[m.part]; if (!range) continue;
+        const pc = m.needsDoubling ? pv*2 : pv;
+        result[m.part] = { label:BODY_PART_LABELS[m.part], min:Math.round(pc-range.fit_max), max:Math.round(pc-range.fit_min), isCirc: m.part!=='shoulder' };
+      }
+      return result;
+    }
+
+    // =====================================================
+    // UI 상태
+    // =====================================================
+    let currentProduct = PRODUCTS[0];
+    let selectedGender = '';
+
+    // =====================================================
+    // 상품 렌더링
+    // =====================================================
+    function renderProduct(p) {
+      currentProduct = p;
+      // 상품 이미지
+      const imgEl = document.getElementById('product-img');
+      const emojiEl = document.getElementById('product-emoji');
+      if (p.image) {
+        imgEl.src = p.image; imgEl.alt = p.name; imgEl.classList.remove('hidden'); emojiEl.classList.add('hidden');
+      } else {
+        imgEl.classList.add('hidden'); emojiEl.textContent = p.emoji; emojiEl.classList.remove('hidden');
+      }
+      // 상세 이미지 (상품정보 탭 내)
+      const detailImg = document.getElementById('detail-img');
+      if (p.image) { detailImg.src = p.image; detailImg.alt = p.name; }
+      document.getElementById('brand-name').textContent = p.brand;
+      document.getElementById('product-name').textContent = p.name;
+      document.getElementById('product-discount').textContent = p.discount;
+      document.getElementById('product-price').textContent = p.price;
+      document.getElementById('product-original-price').textContent = p.originalPrice;
+      document.getElementById('product-gender-size').textContent = p.genderSize || '';
+      document.getElementById('product-brand-size').textContent = `브랜드 사이즈 : ${p.brandSize || '-'}`;
+
+      // 사이즈 테이블
+      const fields = PRODUCT_FIELDS[p.main_category];
+      const rows = fields.filter(f => p[f] != null).map(f =>
+        `<tr class="border-b border-gray-100"><td class="py-3 font-bold text-sm w-28">${MEASUREMENT_LABELS[f]}</td><td class="py-3 text-sm">${p[f]}</td></tr>`
+      ).join('');
+      document.querySelector('#size-table tbody').innerHTML = rows;
+
+      // 도식화 SVG
+      renderDiagram(p.main_category);
+
+      // 사이즈 핏 가이드 (LLM mock)
+      document.getElementById('fit-guide-summary').textContent = p.fitSummary || '';
+      document.getElementById('fit-guide-context').textContent = p.fitContext || '';
+
+      // 직접 입력 필드
+      const dfs = DIRECT_INPUT_FIELDS[p.main_category];
+      document.getElementById('direct-fields').innerHTML = dfs.map(f =>
+        `<div><label for="direct-${f.key}" class="block text-xs font-medium text-gray-600 mb-1">${f.label} <span class="text-gray-400 cursor-help" title="${f.tip}">ⓘ</span></label><div class="relative"><input id="direct-${f.key}" type="text" inputmode="decimal" placeholder="예: ${f.key==='shoulder_width'?'42':'88'}" class="w-full rounded-lg border border-gray-200 px-3 py-2 pr-10 text-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900" /><span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">cm</span></div></div>`
+      ).join('');
+
+      // 데모 탭 하이라이트
+      document.querySelectorAll('.demo-btn').forEach((btn, i) => {
+        btn.classList.toggle('font-bold', i === p.id);
+        btn.classList.toggle('underline', i === p.id);
+        btn.classList.toggle('opacity-60', i !== p.id);
+      });
+    }
+
+    function renderDiagram(cat) {
+      const svg = document.getElementById('size-diagram');
+      const diagrams = {
+        outer: `<rect x="50" y="20" width="100" height="140" rx="8" fill="none" stroke="#ccc" stroke-width="1.5"/>
+          <line x1="50" y1="60" x2="150" y2="60" stroke="#333" stroke-width="1" stroke-dasharray="4,3"/><text x="100" y="55" text-anchor="middle" font-size="8" fill="#666">가슴단면</text>
+          <line x1="60" y1="20" x2="140" y2="20" stroke="#333" stroke-width="1" stroke-dasharray="4,3"/><text x="100" y="16" text-anchor="middle" font-size="8" fill="#666">어깨단면</text>
+          <line x1="155" y1="25" x2="155" y2="160" stroke="#333" stroke-width="1" stroke-dasharray="4,3"/><text x="170" y="95" text-anchor="middle" font-size="8" fill="#666" transform="rotate(90,170,95)">총장</text>
+          <line x1="150" y1="30" x2="175" y2="90" stroke="#333" stroke-width="1" stroke-dasharray="4,3"/><text x="178" y="55" font-size="7" fill="#666">팔총장</text>`,
+        top: `<rect x="50" y="20" width="100" height="130" rx="8" fill="none" stroke="#ccc" stroke-width="1.5"/>
+          <line x1="50" y1="55" x2="150" y2="55" stroke="#333" stroke-width="1" stroke-dasharray="4,3"/><text x="100" y="50" text-anchor="middle" font-size="8" fill="#666">가슴단면</text>
+          <line x1="60" y1="20" x2="140" y2="20" stroke="#333" stroke-width="1" stroke-dasharray="4,3"/><text x="100" y="16" text-anchor="middle" font-size="8" fill="#666">어깨단면</text>
+          <line x1="155" y1="25" x2="155" y2="150" stroke="#333" stroke-width="1" stroke-dasharray="4,3"/><text x="170" y="90" text-anchor="middle" font-size="8" fill="#666" transform="rotate(90,170,90)">총장</text>`,
+        dress: `<path d="M70,20 L130,20 L140,80 L135,160 L65,160 L60,80 Z" fill="none" stroke="#ccc" stroke-width="1.5"/>
+          <line x1="60" y1="50" x2="140" y2="50" stroke="#333" stroke-width="1" stroke-dasharray="4,3"/><text x="100" y="45" text-anchor="middle" font-size="8" fill="#666">가슴단면</text>
+          <line x1="65" y1="85" x2="135" y2="85" stroke="#333" stroke-width="1" stroke-dasharray="4,3"/><text x="100" y="80" text-anchor="middle" font-size="8" fill="#666">허리단면</text>
+          <line x1="155" y1="25" x2="155" y2="160" stroke="#333" stroke-width="1" stroke-dasharray="4,3"/><text x="170" y="95" text-anchor="middle" font-size="8" fill="#666" transform="rotate(90,170,95)">총장</text>`,
+        bottom: `<path d="M55,20 L145,20 L145,50 L125,170 L105,170 L100,80 L95,170 L75,170 L55,50 Z" fill="none" stroke="#ccc" stroke-width="1.5"/>
+          <line x1="55" y1="25" x2="145" y2="25" stroke="#333" stroke-width="1" stroke-dasharray="4,3"/><text x="100" y="18" text-anchor="middle" font-size="8" fill="#666">허리단면</text>
+          <line x1="50" y1="50" x2="150" y2="50" stroke="#333" stroke-width="1" stroke-dasharray="4,3"/><text x="100" y="45" text-anchor="middle" font-size="8" fill="#666">힙단면</text>
+          <line x1="155" y1="25" x2="155" y2="170" stroke="#333" stroke-width="1" stroke-dasharray="4,3"/><text x="170" y="100" text-anchor="middle" font-size="8" fill="#666" transform="rotate(90,170,100)">총장</text>`,
+      };
+      svg.innerHTML = diagrams[cat] || diagrams.outer;
+    }
+
+    // =====================================================
+    // 데모 상품 전환
+    // =====================================================
+    function switchProduct(idx) {
+      renderProduct(PRODUCTS[idx]);
+      window.scrollTo(0, 0);
+    }
+
+    function scrollToSizeInfo() {
+      const el = document.getElementById('size-info-anchor');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // =====================================================
+    // 바텀시트 제어
+    // =====================================================
+    function openFitCheck() {
+      document.getElementById('sheet-input').classList.remove('hidden');
+      document.getElementById('sheet-result').classList.add('hidden');
+      document.getElementById('sheet-title').textContent = '핏 확인';
+      // 티저 텍스트 설정
+      const teaser = `${currentProduct.fitContext} — ${currentProduct.fitSummary}`;
+      document.getElementById('sheet-teaser-text').textContent = teaser;
+      document.getElementById('overlay').classList.remove('hidden-overlay');
+      document.getElementById('bottom-sheet').classList.remove('closed');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeFitCheck() {
+      document.getElementById('overlay').classList.add('hidden-overlay');
+      document.getElementById('bottom-sheet').classList.add('closed');
+      document.body.style.overflow = '';
+    }
+
+    function showInputAgain() {
+      document.getElementById('sheet-input').classList.remove('hidden');
+      document.getElementById('sheet-result').classList.add('hidden');
+      document.getElementById('sheet-title').textContent = '핏 확인';
+      document.getElementById('bottom-sheet').scrollTop = 0;
+    }
+
+    // =====================================================
+    // 입력 폼 로직
+    // =====================================================
+    function selectGender(g, btn) {
+      selectedGender = g;
+      document.querySelectorAll('.gender-btn').forEach(b => { b.classList.remove('border-gray-900','bg-gray-900','text-white'); b.classList.add('border-gray-300','bg-white','text-gray-700'); });
+      btn.classList.remove('border-gray-300','bg-white','text-gray-700');
+      btn.classList.add('border-gray-900','bg-gray-900','text-white');
+    }
+
+    function toggleDirect() {
+      const f = document.getElementById('direct-fields'), a = document.getElementById('direct-arrow');
+      f.classList.toggle('hidden'); a.textContent = f.classList.contains('hidden') ? '▶' : '▼';
+    }
+
+    function showError(msg) { const e=document.getElementById('input-error'); e.textContent=msg; e.classList.remove('hidden'); }
+    function hideError() { document.getElementById('input-error').classList.add('hidden'); }
+
+    function runFitCheck(e) {
+      e.preventDefault(); hideError();
+      if (!selectedGender) { showError('성별을 선택해 주세요.'); return; }
+      const h = parseFloat(document.getElementById('inp-height').value);
+      const w = parseFloat(document.getElementById('inp-weight').value);
+      if (!h||!w) { showError('키와 몸무게를 모두 입력해 주세요.'); return; }
+      if (h<100||h>250) { showError('키를 100~250cm 범위로 입력해 주세요.'); return; }
+      if (w<20||w>200) { showError('몸무게를 20~200kg 범위로 입력해 주세요.'); return; }
+
+      const direct = {};
+      for (const f of DIRECT_INPUT_FIELDS[currentProduct.main_category]) {
+        const el = document.getElementById('direct-'+f.key);
+        if (el) { const v = parseFloat(el.value); if (v>0) direct[f.key]=v; }
+      }
+
+      const result = calculateFit(currentProduct, { gender:selectedGender, height:h, weight:w, direct });
+      renderResult(result);
+      document.getElementById('sheet-input').classList.add('hidden');
+      document.getElementById('sheet-result').classList.remove('hidden');
+      document.getElementById('sheet-title').textContent = '핏 확인 결과';
+      document.getElementById('bottom-sheet').scrollTop = 0;
+    }
+
+    // =====================================================
+    // 결과 렌더링
+    // =====================================================
+    const VC = {
+      tight:{icon:'<svg class="w-7 h-7 text-orange-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 17h8m-8-5h8m-8-5h8M3 17l3-3-3-3m3 3H3"/></svg>',label:'타이트할 수 있어요',color:'text-orange-600',bg:'bg-orange-50 border-orange-200',bar:'bg-orange-400'},
+      fit:{icon:'<svg class="w-7 h-7 text-green-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',label:'딱 맞을 거예요',color:'text-green-600',bg:'bg-green-50 border-green-200',bar:'bg-green-400'},
+      loose:{icon:'<svg class="w-7 h-7 text-blue-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5"/></svg>',label:'여유 있을 거예요',color:'text-blue-600',bg:'bg-blue-50 border-blue-200',bar:'bg-blue-400'},
+    };
+    const OM = { tight:'일부 부위가 타이트할 수 있어요.', fit:'전체적으로 잘 맞을 거예요!', loose:'전체적으로 넉넉한 핏이에요.' };
+
+    function easeToP(e) { return ((Math.max(-5,Math.min(25,e))+5)/30)*100; }
+    function easeMsg(d) {
+      const a = Math.abs(d.ease).toFixed(1);
+      if (d.ease<0) return `옷이 ${a}cm 정도 작아서 입기 어려울 수 있어요`;
+      if (d.verdict==='tight') return `${a}cm 여유로 꽉 맞는 느낌이에요`;
+      if (d.verdict==='fit') return `${a}cm 여유가 있어서 편하게 맞아요`;
+      return `${a}cm 여유가 있어서 넉넉해요`;
+    }
+
+    function renderResult(r) {
+      const oc = VC[r.overallVerdict];
+      document.getElementById('overall-result').className = `rounded-xl border p-5 mb-4 mt-2 ${oc.bg}`;
+      document.getElementById('overall-result').innerHTML = `<div class="flex items-center gap-3">${oc.icon}<div><p class="text-lg font-bold ${oc.color}">${oc.label}</p><p class="text-sm text-gray-500 mt-0.5">${OM[r.overallVerdict]}</p></div></div>`;
+
+      if (r.details.length===0) {
+        document.getElementById('no-details-warning').classList.remove('hidden');
+        document.getElementById('detail-results').classList.add('hidden');
+      } else {
+        document.getElementById('no-details-warning').classList.add('hidden');
+        document.getElementById('detail-results').classList.remove('hidden');
+        document.getElementById('detail-results').innerHTML = `<h4 class="text-sm font-bold text-gray-500 mb-1">부위별 상세</h4>` +
+          r.details.map(d => {
+            const dc=VC[d.verdict], pct=easeToP(d.ease);
+            return `<div class="space-y-1.5">
+              <div class="flex items-center justify-between"><span class="text-sm font-medium">${d.partLabel}</span><span class="text-xs font-medium ${dc.color}">${dc.label}</span></div>
+              <div class="relative h-2 w-full rounded-full bg-gray-100"><div class="absolute top-0 left-[37%] h-full w-[30%] rounded-full bg-green-100"></div><div class="gauge-marker absolute top-1/2 -translate-y-1/2 h-4 w-4 rounded-full border-2 border-white shadow ${dc.bar}" style="left:calc(${pct}% - 8px)"></div></div>
+              <div class="flex justify-between text-[10px] text-gray-400"><span>타이트</span><span>적합</span><span>넉넉</span></div>
+              <p class="text-xs text-gray-500">${easeMsg(d)}</p></div>`;
+          }).join('');
+      }
+
+      const e = r.estimated;
+      document.getElementById('estimated-info').innerHTML = `<p class="text-xs font-medium text-gray-400 mb-1.5">참고: 추정 치수</p><div class="flex flex-wrap gap-2 text-xs text-gray-500"><span>가슴 ${e.chest}cm</span><span>어깨 ${e.shoulder_width}cm</span><span>허리 ${e.waist}cm</span><span>힙 ${e.hip}cm</span><span>허벅지 ${e.thigh}cm</span></div>`;
+    }
+
+    // 초기 렌더링
+    renderProduct(PRODUCTS[0]);
+  </script>
+</body>
+</html>
